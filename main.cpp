@@ -117,9 +117,7 @@ public:
     this->sensor.tare();
   }
 
-  void tare() {
-    this->sensor.tare();
-  }
+  void tare() { this->sensor.tare(); }
 
   float read() { return this->sensor.get_units(1); }
 };
