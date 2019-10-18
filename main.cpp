@@ -117,14 +117,13 @@ public:
     this->sensor.tare();
   }
 
+  void tare() {
+    this->sensor.tare();
+  }
+
   float read() { return this->sensor.get_units(1); }
 };
 
-/*
-Button butts[NUM_PUMPS] = {
-    Button(4), Button(5), Button(6), Button(7), Button(8), Button(9),
-};
-*/
 Pump pumps[NUM_PUMPS] = {
     Pump(4), Pump(5), Pump(6), Pump(7), Pump(8), Pump(9),
 };
@@ -135,15 +134,14 @@ void press(int i) {}
 
 void setup() {
   Serial.begin(9600);
-  scale.init();
-
   Serial.println("booting...");
 
+  scale.init();
+
   for (int i = 0; i < NUM_PUMPS; i++) {
-    // butts[i].init();
     pumps[i].init();
     pumps[i].turnOn();
-    delay(1000);
+    delay(100);
     pumps[i].turnOff();
     Serial.print("pump ");
     Serial.print(i, DEC);
@@ -154,11 +152,9 @@ void setup() {
 }
 
 void loop() {
-  /*
   Serial.print("reading = ");
   Serial.println(scale.read(), 1);
-  delay(100);
-  */
+  delay(500);
 }
 
 int main(void) {
