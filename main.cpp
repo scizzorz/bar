@@ -135,25 +135,30 @@ void press(int i) {}
 
 void setup() {
   Serial.begin(9600);
+  scale.init();
+
+  Serial.println("booting...");
 
   for (int i = 0; i < NUM_PUMPS; i++) {
     // butts[i].init();
     pumps[i].init();
-    scale.init();
+    pumps[i].turnOn();
+    delay(1000);
+    pumps[i].turnOff();
+    Serial.print("pump ");
+    Serial.print(i, DEC);
+    Serial.println(" ready.");
   }
+
+  Serial.println("booted.");
 }
 
 void loop() {
+  /*
   Serial.print("reading = ");
   Serial.println(scale.read(), 1);
-  // check for button presses
-  for (int i = 0; i < NUM_PUMPS; i++) {
-    /*
-    if (butts[i].checkPress() && butts[i].isPressed()) {
-      press(i);
-    }
-    */
-  }
+  delay(100);
+  */
 }
 
 int main(void) {
