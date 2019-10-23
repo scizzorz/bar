@@ -119,16 +119,44 @@ public:
 
   void tare() { this->sensor.tare(); }
 
-  float read() { return this->sensor.get_units(1); }
+  float read() { return this->sensor.get_units(2); }
 };
 
 Pump pumps[NUM_PUMPS] = {
     Pump(4), Pump(5), Pump(6), Pump(7), Pump(8), Pump(9),
 };
 
-Scale scale(3, 2, -7000);
+Scale scale(3, 2, -13500);
 
 void press(int i) {}
+
+void dispense(int pump, float amt) {
+  int delayFactor = 600;
+  int quit = 100;
+  int leadTime = 200;
+  int lagTime = 3000;
+  float dropRate = 0.5;
+
+  float cur = scale.read();
+  float target = cur + amt;
+
+  while(true) {
+    int delayTime = (target - cur) * delayFactor;
+
+    if(delayTime <= quit || cur > target) {
+      break;
+    }
+
+    pumps[pump].turnOn();
+    delay(leadTime);
+    delay(delayTime);
+    pumps[pump].turnOff();
+    delay(lagTime);
+
+    cur = scale.read();
+    delayFactor *= dropRate;
+  }
+}
 
 void setup() {
   Serial.begin(9600);
@@ -138,20 +166,36 @@ void setup() {
 
   for (int i = 0; i < NUM_PUMPS; i++) {
     pumps[i].init();
-    pumps[i].turnOn();
-    delay(100);
-    pumps[i].turnOff();
     Serial.print("pump ");
     Serial.print(i, DEC);
     Serial.println(" ready.");
   }
 
+  delay(3000);
+
+  scale.tare();
+
   Serial.println("booted.");
+  Serial.println("place cup now.");
+  delay(5000);
+
+  float cup = scale.read();
+  Serial.print("cup weighs ");
+  Serial.println(cup);
+
+  if(cup < 5) {
+    Serial.println("NO CUP");
+    return;
+  }
+
+  dispense(0, 4);
+  dispense(5, 4);
 }
 
 void loop() {
-  Serial.print("reading = ");
-  Serial.println(scale.read(), 1);
+  Serial.print(millis(), DEC);
+  Serial.print("\t");
+  Serial.println(scale.read());
   delay(500);
 }
 
