@@ -239,6 +239,33 @@ void dispense(int pump, float amt) {
   Serial.println(target);
 }
 
+#define CRANBERRY 0
+#define VODKA 1
+#define CIDER 2
+#define BOURBON 3
+#define GINGER 4
+#define LIME 5
+
+void dispenseCranberryVodka() {
+  Serial.println("Cranberry vodka");
+  dispense(VODKA, 2);
+  dispense(CRANBERRY, 6);
+}
+
+void dispenseMule() {
+  Serial.println("Mule");
+  dispense(VODKA, 2);
+  dispense(GINGER, 3);
+  dispense(LIME, 0.5);
+  dispense(GINGER, 3);
+}
+
+void dispenseBourbonCider() {
+  Serial.println("Bourbon cider");
+  dispense(BOURBON, 2);
+  dispense(CIDER, 6);
+}
+
 void press(int i) {
   float cupWeight = scale.read();
   Serial.print("cupWeight = ");
@@ -252,17 +279,20 @@ void press(int i) {
 
   beep_succ();
 
+  if(i == 3) {
+    i = random(3);
+    Serial.print("Dealer's choice: ");
+    Serial.println(i, DEC);
+  }
+
   if(i == 0) {
-    dispense(0, 4.0);
+    dispenseMule();
   }
   else if(i == 1) {
-    dispense(1, 4.0);
+    dispenseCranberryVodka();
   }
   else if(i == 2) {
-    dispense(5, 2.0);
-  }
-  else if(i == 3) {
-    dispense(5, 8.0);
+    dispenseBourbonCider();
   }
 
   beep_succ();
