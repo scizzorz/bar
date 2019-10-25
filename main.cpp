@@ -204,10 +204,6 @@ void press(int i) {
   Serial.print("pourSpeed = ");
   Serial.print(pourSpeed);
   Serial.println(" per sec");
-
-  // dispense(0, 2);
-  // dispense(5, 6);
-  // dispense(2, 6);
 }
 
 void dispense(int pump, float amt) {
@@ -249,25 +245,27 @@ void setup() {
   Serial.println("booting...");
 
   scale.init();
+  Serial.println("scale ready.");
+
   beeper.init();
+  Serial.println("beeper ready.");
 
   for (int i = 0; i < NUM_PUMPS; i++) {
     pumps[i].init();
-    Serial.print("pump ");
-    Serial.print(i, DEC);
-    Serial.println(" ready.");
   }
+  Serial.println("pumps ready.");
 
   for (int i=0; i<NUM_BUTTS; i++) {
     butts[i].init();
   }
+  Serial.println("buttons ready.");
 
+  Serial.println("waiting for scale to stabilize....");
   delay(3000);
-
   scale.tare();
+  Serial.println("scale tared.");
 
   Serial.println("booted.");
-
   beep_succ();
 }
 
