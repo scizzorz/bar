@@ -10,6 +10,7 @@
 #define NUM_PUMPS 6
 #define NUM_BUTTS 4
 #define MIN_CUP_WEIGHT 5
+#define PUMP_HISTORY 4
 
 class Knob {
 private:
@@ -84,12 +85,48 @@ private:
   int pin;
   bool on;
 
+  // a circular buffer for storing the recent pump durations + amounts dispensed
+  float pumpTimes[PUMP_HISTORY];
+  float pumpAmounts[PUMP_HISTORY];
+  int historyIndex;
+
 public:
-  Pump(int pin) : pin(pin), on(false) {}
+  Pump(int pin) : pin(pin), on(false), historyIndex(0) {
+    for(int i=0; i<PUMP_HISTORY; i++) {
+      this->pumpTimes[i] = 1000.0;
+      this->pumpAmounts[i] = 2.0;
+    }
+  }
 
   void init() {
     pinMode(this->pin, OUTPUT);
     this->turnOff();
+  }
+
+  // record a duration + amount dispensed and move the history index forwards
+  void recordMeasure(float time, float amount) {
+    Serial.print("recording measure: ");
+    Serial.print(amount);
+    Serial.print(" in ");
+    Serial.print(time);
+    Serial.print("ms; current average pump rate = ");
+    Serial.println(this->pumpRate());
+
+    this->pumpTimes[this->historyIndex] = time;
+    this->pumpAmounts[this->historyIndex] = amount;
+    this->historyIndex = (this->historyIndex + 1) % PUMP_HISTORY;
+  }
+
+  // compute the average pump rate as (ms per oz) for the recent history
+  float pumpRate() {
+    float totalAmount = 0.0;
+    float totalTime = 0.0;
+    for(int i=0; i<PUMP_HISTORY; i++) {
+      totalAmount += this->pumpAmounts[i];
+      totalTime += this->pumpTimes[i];
+    }
+
+    return totalTime / totalAmount;
   }
 
   void set(bool to) {
@@ -146,6 +183,62 @@ void beep_succ() {
   beeper.beep(100);
 }
 
+void dispense(int pump, float amt) {
+  float cur = scale.read();
+  float target = cur + amt;
+  int lagTime = 5000;
+
+  Serial.print("start dispense: ");
+  Serial.print(cur);
+  Serial.print(" / ");
+  Serial.println(target);
+
+  while(true) {
+    int startTime = millis();
+    float remain = (target - cur);
+
+    Serial.print("need to pour ");
+    Serial.println(remain);
+
+    // it's close enough, quit out
+    if(remain < 0.2) {
+      break;
+    }
+
+    // go for broke
+    else if(remain <= 3) {
+      int delayTime = (int)(pumps[pump].pumpRate() * remain);
+      pumps[pump].turnOn();
+      delay(delayTime);
+      pumps[pump].turnOff();
+    }
+
+    // try to pour until 2oz away
+    else {
+      int delayTime = (int)(pumps[pump].pumpRate() * (remain - 2.0));
+      pumps[pump].turnOn();
+      delay(delayTime);
+      pumps[pump].turnOff();
+    }
+
+    int endTime = millis();
+    delay(lagTime);
+    float end = scale.read();
+    pumps[pump].recordMeasure(endTime - startTime, end - cur);
+    cur = end;
+
+    Serial.print("  mid dispense: ");
+    Serial.print(cur);
+    Serial.print(" / ");
+    Serial.println(target);
+  }
+
+  Serial.print("final dispense: ");
+  Serial.print(cur);
+  Serial.print(" / ");
+  Serial.println(target);
+}
+
 void press(int i) {
   float cupWeight = scale.read();
   Serial.print("cupWeight = ");
@@ -159,32 +252,19 @@ void press(int i) {
 
   beep_succ();
 
-  int startTime = millis();
-
   if(i == 0) {
-    pumps[0].turnOn();
-    delay(1000);
-    pumps[0].turnOff();
+    dispense(0, 4.0);
   }
   else if(i == 1) {
-    pumps[0].turnOn();
-    delay(5000);
-    pumps[0].turnOff();
+    dispense(1, 4.0);
   }
   else if(i == 2) {
-    pumps[5].turnOn();
-    delay(1000);
-    pumps[5].turnOff();
+    dispense(5, 2.0);
   }
   else if(i == 3) {
-    pumps[5].turnOn();
-    delay(5000);
-    pumps[5].turnOff();
+    dispense(5, 8.0);
   }
 
-  int endTime = millis();
-
-  delay(5000);
   beep_succ();
 
   float finalWeight = scale.read();
@@ -194,50 +274,6 @@ void press(int i) {
   float drinkWeight = finalWeight - cupWeight;
   Serial.print("drinkWeight = ");
   Serial.println(drinkWeight);
-
-  float pourTime = (endTime - startTime) / 1000.0;
-  Serial.print("pourTime = ");
-  Serial.print(pourTime);
-  Serial.println(" sec");
-
-  float pourSpeed = drinkWeight / pourTime;
-  Serial.print("pourSpeed = ");
-  Serial.print(pourSpeed);
-  Serial.println(" per sec");
-}
-
-void dispense(int pump, float amt) {
-  int delayFactor = 800;
-  int quit = 200;
-  int leadTime = 200;
-  int lagTime = 3000;
-  float dropRate = 0.9;
-
-  float cur = scale.read();
-  float target = cur + amt;
-
-  while(true) {
-    Serial.print("@ ");
-    Serial.print(cur);
-    Serial.print(" / ");
-    Serial.println(target);
-
-    int delayTime = (target - cur) * delayFactor;
-
-    if(delayTime <= quit || cur > target) {
-      Serial.println("pump decay is too low");
-      break;
-    }
-
-    pumps[pump].turnOn();
-    delay(leadTime);
-    delay(delayTime);
-    pumps[pump].turnOff();
-    delay(lagTime);
-
-    cur = scale.read();
-    delayFactor *= dropRate;
-  }
 }
 
 void setup() {
